@@ -22,7 +22,7 @@ THREE_DECIMALS = {"BHD", "KWD", "OMR", "JOD", "TND"}
 
 TOP = {"format", "generator", "account", "period", "opening", "closing", "transactions", "x"}
 ACCOUNT = {"type", "currency", "institution", "name", "mask", "x"}
-PERIOD = {"start", "end"}
+PERIOD = {"start", "end", "x"}
 TXN = {"id", "date", "amount", "description", "balance", "pending", "x"}
 
 

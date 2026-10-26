@@ -11,7 +11,7 @@ without asking the user to map columns, signs or dates.
 
 This skill covers **bank (`banking`) and card (`credit`) accounts** only. Investment and
 crypto statements use a different shape (holdings and activity); don't attempt them with
-this skill. This skill is self-contained: everything you need is in `references/`.
+this skill; use the `investment-import` skill for those. This skill is self-contained: everything you need is in `references/`.
 The machine-readable JSON Schema is vendored at `schemas/talia.statement.1.json`; if it
 disagrees with `references/format.md`, the schema wins. Format versions are immutable: a
 change ships as a new version (`talia.statement/2`), never an edit to `/1`. Write `/1` files
