@@ -8,6 +8,7 @@ Skills for agents working with the Talia app. Each skill is a directory under
 |---|---|
 | [`transaction-import`](skills/transaction-import/SKILL.md) | Turn a bank/card statement (PDF, CSV) into a `talia.statement/1` JSON file Talia can import |
 | [`investment-import`](skills/investment-import/SKILL.md) | Turn a brokerage, retirement or crypto statement (PDF, CSV, OFX) into a `talia.statement/1` file with holdings and/or activity |
+| [`bundle-import`](skills/bundle-import/SKILL.md) | Zip several statement files and hand the bundle to Talia with a `talia://` link or file open (same computer) |
 
 Skills are self-contained: they must not reference Talia's source code or internal docs,
 which agents using this repository can't see. Each skill vendors the
