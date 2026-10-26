@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://talia.money/schemas/talia.statement/1.json",
+  "title": "Talia statement file, version 1",
+  "description": "One account's statement: a bank or card account's transactions, or an investment account's holdings and activity. A released version never changes; Talia keeps reading it after newer versions exist. Some rules are not expressible here and are checked by Talia only: amounts with more decimal places than their currency, references between activity entries, activity dated outside period, and which sections each account type allows.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "account"],
+  "properties": {
+    "format": { "const": "talia.statement/1" },
+    "generator": { "type": "string" },
+    "account": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "currency"],
+      "properties": {
+        "type": { "enum": ["banking", "credit", "investment", "crypto"] },
+        "currency": { "$ref": "#/$defs/currency" },
+        "institution": { "type": "string" },
+        "name": { "type": "string" },
+        "mask": { "type": "string", "pattern": "^[A-Za-z0-9]{1,4}$" },
+        "x": {}
+      }
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/date" },
+        "end": { "$ref": "#/$defs/date" },
+        "x": {}
+      }
+    },
+    "opening": { "$ref": "#/$defs/decimal" },
+    "closing": { "$ref": "#/$defs/decimal" },
+    "transactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["date", "amount", "description"],
+        "properties": {
+          "id": { "$ref": "#/$defs/nonEmpty" },
+          "date": { "$ref": "#/$defs/date" },
+          "amount": { "$ref": "#/$defs/decimal" },
+          "description": { "type": "string" },
+          "balance": { "$ref": "#/$defs/decimal" },
+          "pending": { "type": "boolean" },
+          "x": {}
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["securities", "cash", "flows", "income"],
+      "properties": {
+        "securities": { "type": "boolean" },
+        "cash": { "type": "boolean" },
+        "flows": { "type": "boolean" },
+        "income": { "type": "boolean" },
+        "x": {}
+      }
+    },
+    "securities": {
+      "type": "object",
+      "properties": { "x": {} },
+      "additionalProperties": { "$ref": "#/$defs/security" }
+    },
+    "holdings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asOf", "complete", "positions"],
+      "properties": {
+        "asOf": { "$ref": "#/$defs/date" },
+        "complete": { "type": "boolean" },
+        "quantities": { "enum": ["settled", "trade"] },
+        "positions": { "type": "array", "items": { "$ref": "#/$defs/position" } },
+        "cash": { "type": "array", "items": { "$ref": "#/$defs/money" } },
+        "total": { "$ref": "#/$defs/decimal" },
+        "totals": { "type": "array", "items": { "$ref": "#/$defs/money" }, "description": "The institution's total for each currency section: the positions and cash in that currency." },
+        "x": {}
+      }
+    },
+    "activity": { "type": "array", "items": { "$ref": "#/$defs/activity" } },
+    "x": {}
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "account": { "properties": { "type": { "enum": ["banking", "credit"] } } } } },
+      "then": {
+        "required": ["transactions", "period"],
+        "not": { "anyOf": [{ "required": ["securities"] }, { "required": ["holdings"] }, { "required": ["activity"] }, { "required": ["coverage"] }] }
+      }
+    },
+    {
+      "if": { "properties": { "account": { "properties": { "type": { "enum": ["investment", "crypto"] } } } } },
+      "then": {
+        "anyOf": [{ "required": ["holdings"] }, { "required": ["activity"] }],
+        "not": { "anyOf": [{ "required": ["transactions"] }, { "required": ["opening"] }, { "required": ["closing"] }] }
+      }
+    },
+    { "if": { "required": ["activity"] }, "then": { "required": ["coverage", "period"] } },
+    { "if": { "required": ["coverage"] }, "then": { "required": ["activity"] } }
+  ],
+  "$defs": {
+    "decimal": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "A decimal string: \"-1234.50\". Never a JSON number." },
+    "nonNegative": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" },
+    "positive": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "not": { "pattern": "^0+(\\.0+)?$" } },
+    "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "YYYY-MM-DD, a real calendar date." },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "nonEmpty": { "type": "string", "pattern": "\\S" },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "amount"],
+      "properties": {
+        "currency": { "$ref": "#/$defs/currency" },
+        "amount": { "$ref": "#/$defs/decimal" },
+        "x": {}
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [{ "required": ["symbol"] }, { "required": ["isin"] }, { "required": ["cusip"] }, { "required": ["name"] }],
+      "dependentRequired": { "exchange": ["symbol"] },
+      "properties": {
+        "symbol": { "$ref": "#/$defs/nonEmpty" },
+        "exchange": { "type": "string", "pattern": "^[A-Z0-9]{4}$", "description": "ISO 10383 MIC." },
+        "isin": { "type": "string", "pattern": "^[A-Z]{2}[A-Z0-9]{9}[0-9]$" },
+        "cusip": { "type": "string", "pattern": "^[A-Z0-9]{9}$" },
+        "name": { "$ref": "#/$defs/nonEmpty" },
+        "kind": { "enum": ["equity", "fund", "bond", "gic", "option", "crypto", "other"] },
+        "priceMultiplier": { "$ref": "#/$defs/positive" },
+        "x": {}
+      }
+    },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["security", "quantity"],
+      "properties": {
+        "security": { "type": "string" },
+        "quantity": { "$ref": "#/$defs/decimal" },
+        "price": { "$ref": "#/$defs/nonNegative" },
+        "marketValue": { "$ref": "#/$defs/decimal" },
+        "costBasis": { "$ref": "#/$defs/decimal" },
+        "acquiredOn": { "$ref": "#/$defs/date" },
+        "currency": { "$ref": "#/$defs/currency" },
+        "x": {}
+      }
+    },
+    "activity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "date"],
+      "properties": {
+        "kind": {
+          "enum": ["buy", "sell", "dividend", "interest", "distribution", "fee", "tax_withholding", "transfer_in", "transfer_out", "in_kind_in", "in_kind_out", "fx_conversion", "corporate_action", "other"]
+        },
+        "date": { "$ref": "#/$defs/date" },
+        "settles": { "$ref": "#/$defs/date" },
+        "id": { "$ref": "#/$defs/nonEmpty", "description": "The institution's own transaction id. Stored, and used to recognise the same event in a later file." },
+        "ref": { "$ref": "#/$defs/nonEmpty", "description": "A name for this entry within the file, for reinvests to point at. Never stored." },
+        "description": { "type": "string" },
+        "security": { "type": "string" },
+        "quantity": { "$ref": "#/$defs/decimal" },
+        "price": { "$ref": "#/$defs/nonNegative" },
+        "amount": { "$ref": "#/$defs/decimal" },
+        "fees": { "$ref": "#/$defs/nonNegative" },
+        "withholding": { "$ref": "#/$defs/nonNegative" },
+        "currency": { "$ref": "#/$defs/currency" },
+        "reinvests": { "type": "string", "description": "The id or ref of the dividend, interest or distribution this buy reinvests." },
+        "legs": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/$defs/money" } },
+        "action": { "enum": ["split", "merger", "spinoff"] },
+        "ratio": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "string", "pattern": "^[1-9]\\d*$" } },
+        "from": { "type": "string", "description": "A spinoff's parent: the key of the security the new one came from." },
+        "actionDate": { "$ref": "#/$defs/date", "description": "Cash in lieu of a fraction: the effective date of the corporate action it pays for." },
+        "x": {}
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "enum": ["buy", "sell"] } } },
+          "then": { "required": ["security", "quantity", "amount"], "properties": { "quantity": { "$ref": "#/$defs/nonNegative" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "enum": ["dividend", "interest", "distribution", "fee", "tax_withholding", "transfer_in", "transfer_out"] } } },
+          "then": { "required": ["amount"], "properties": { "quantity": { "$ref": "#/$defs/nonNegative" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "enum": ["in_kind_in", "in_kind_out"] } } },
+          "then": {
+            "required": ["security", "quantity"],
+            "properties": { "quantity": { "$ref": "#/$defs/nonNegative" } },
+            "not": { "anyOf": [{ "required": ["amount"] }, { "required": ["fees"] }, { "required": ["withholding"] }] }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "fx_conversion" } } },
+          "then": {
+            "required": ["legs"],
+            "not": { "anyOf": [{ "required": ["security"] }, { "required": ["quantity"] }, { "required": ["price"] }, { "required": ["amount"] }, { "required": ["currency"] }] }
+          },
+          "else": { "not": { "required": ["legs"] } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "corporate_action" } } },
+          "then": {
+            "required": ["security", "action"],
+            "if": { "required": ["actionDate"] },
+            "then": { "required": ["amount"], "not": { "anyOf": [{ "required": ["quantity"] }, { "required": ["ratio"] }, { "required": ["from"] }] } },
+            "else": { "required": ["quantity"] }
+          },
+          "else": { "not": { "anyOf": [{ "required": ["action"] }, { "required": ["ratio"] }, { "required": ["from"] }, { "required": ["actionDate"] }] } }
+        },
+        {
+          "if": { "required": ["reinvests"] },
+          "then": { "properties": { "kind": { "const": "buy" } } }
+        }
+      ]
+    }
+  }
+}
